@@ -4,30 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>plenty missed calls soundcloud likes shuffled</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap">
 <style>
   :root { color-scheme: light; }
   html, body { height: 100%; }
   body {
-    margin: 0; background: #fff; color: #111;
-    font: 400 14px/1.5 ui-sans-serif, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    margin: 0; background: #fff; color: #000;
+    font-family: Calibri, Carlito, "Segoe UI", sans-serif;
+    font-weight: 700; font-size: 14px; line-height: 1.5;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 26px; padding: 40px 24px; box-sizing: border-box;
     -webkit-user-select: none; user-select: none; cursor: pointer;
   }
   h1 {
-    margin: 0; font-size: clamp(13px, 2.6vw, 17px); font-weight: 400;
+    margin: 0; font-size: clamp(13px, 2.6vw, 17px); font-weight: 700;
     letter-spacing: .14em; text-transform: lowercase; text-align: center;
-    color: #111; opacity: .7;
+    color: #000; opacity: 1;
   }
   #art {
     width: min(70vw, 50vh, 380px); display: block;
-    transition: opacity .5s ease, filter .5s ease;
-    opacity: .55; filter: grayscale(1);
+    opacity: 1;
   }
-  body.playing #art { opacity: 1; filter: none; }
   #now { margin: 0; text-align: center; max-width: 40ch; min-height: 3em; }
-  #t { display: block; font-size: 15px; line-height: 1.35; color: #111; }
-  #a { display: block; font-size: 12px; letter-spacing: .06em; color: #111; opacity: .45; margin-top: 4px; }
+  #t { display: block; font-size: 15px; line-height: 1.35; color: #000; }
+  #a { display: block; font-size: 12px; letter-spacing: .06em; color: #000; opacity: 1; margin-top: 4px; }
   #sc { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; }
 </style>
 </head>
