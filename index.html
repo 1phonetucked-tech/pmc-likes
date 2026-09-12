@@ -12,7 +12,7 @@
     font-family: Arial, Helvetica, sans-serif;
     font-weight: 700; font-size: 14px; line-height: 1.5;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    gap: 26px; padding: 10px 0 40px; box-sizing: border-box;
+    gap: 0; padding: 10px 0 40px; box-sizing: border-box;
     -webkit-user-select: none; user-select: none; cursor: pointer;
   }
   h1 {
@@ -20,23 +20,28 @@
     letter-spacing: -.035em; text-transform: lowercase; text-align: left;
     color: #000; opacity: 1;
     white-space: nowrap;
-    line-height: 1; height: .74em;   /* short box; width still spans the viewport */
-    font-size: 16px; /* replaced by fit() */
+    line-height: 1;                  /* height and font-size are set by fit() */
+    font-size: 16px;
   }
   /* scaleY squashes the letters without touching their width, so fit() still holds */
   h1 span {
     display: inline-block;
     transform-origin: left top;   /* transform itself is set by fit() */
   }
+  /* zero-sized inline-block: its bottom edge sits exactly on the baseline, which
+     is how fit() locates the baseline without guessing at line-box metrics */
+  #bl { display: inline-block; width: 0; height: 0; }
   #art {
-    width: min(70vw, 50vh, 380px); display: block;
+    width: min(70vw, 50vh, 380px); display: block; margin-top: 26px;
     opacity: 1;
   }
   /* flush left, matching the heading's left edge; unbold against the bold body */
   /* no left pad, so the copy starts on the heading's ink edge; one size and
      one leading across all three lines with no margins, so the white between
      them is identical */
-  #meta { width: 100%; text-align: left; font-weight: 400; padding: 3px 0; box-sizing: border-box; }
+  /* 3.25px + 3px pad + the 5.58px of white inside the first line's own line box
+     == the 11.83px of white between the copy lines. See the commit message. */
+  #meta { width: 100%; text-align: left; font-weight: 400; padding: 3px 0; box-sizing: border-box; margin-top: 3.25px; }
   #sub, #t, #a { display: block; margin: 0; font-size: 19px; line-height: 1.35; color: #000; }
   #now { margin: 0; max-width: 40ch; min-height: 2.7em; }
   #a { letter-spacing: .06em; font-weight: 700; }
@@ -45,7 +50,7 @@
 </head>
 <body>
 
-<h1><span id="hd">plenty missed calls</span></h1>
+<h1><span id="hd">plenty missed calls<i id="bl"></i></span></h1>
 <div id="meta">
   <p id="sub">soundcloud likes: shuffled</p>
   <p id="now"><span id="t">tap to play</span><span id="a"></span></p>
@@ -74,11 +79,16 @@
   // first and last lit column. Ink metrics are scale-invariant, so measure at
   // 100px, keep them in em, and reuse them on every resize.
   const head = document.querySelector('h1'), headSpan = document.getElementById('hd');
+  const probe = document.getElementById('bl');
   const TRACK = -.035, SQUASH = .7;   // must match the CSS letter-spacing / scaleY
   let ink = null;
 
+  // Rasterise the heading once and scan for the lit pixels. This gives the real
+  // ink box -- left bearing, width, and the top/bottom relative to the baseline
+  // -- with no TextMetrics sign conventions to get wrong. Ink is scale
+  // invariant, so measure at 100px, keep it in em, and reuse it on resize.
   function measure() {
-    const text = headSpan.textContent, S = 100, pad = 200;
+    const text = headSpan.textContent, S = 100, pad = 200, BY = S * 1.3;
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(text.length * S) + pad * 2;
     cv.height = S * 2;
@@ -88,21 +98,32 @@
     c.fillStyle = '#000';
     if ('letterSpacing' in c) {
       c.letterSpacing = (TRACK * S) + 'px';
-      c.fillText(text, pad, S * 1.3);
+      c.fillText(text, pad, BY);
     } else {                       // older Safari: lay the characters out by hand
       let x = pad;
-      for (const ch of text) { c.fillText(ch, x, S * 1.3); x += c.measureText(ch).width + TRACK * S; }
+      for (const ch of text) { c.fillText(ch, x, BY); x += c.measureText(ch).width + TRACK * S; }
     }
     const w = cv.width, h = cv.height, d = c.getImageData(0, 0, w, h).data;
-    let min = -1, max = -1;
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < h; y++) {
-        if (d[(y * w + x) * 4 + 3]) { if (min < 0) min = x; max = x; break; }
+    let x0 = -1, x1 = -1, y0 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (d[(y * w + x) * 4 + 3]) {
+          if (y0 < 0) y0 = y;
+          y1 = y;
+          if (x0 < 0 || x < x0) x0 = x;
+          if (x > x1) x1 = x;
+        }
       }
     }
-    return min < 0 ? null : { lsb: (min - pad) / S, w: (max - min + 1) / S };
+    if (x0 < 0) return null;
+    return { lsb: (x0 - pad) / S, w: (x1 - x0 + 1) / S,
+             top: (y0 - BY) / S,  bot: (y1 + 1 - BY) / S };
   }
 
+  // Size the type so its ink spans the viewport, then translate so the ink box
+  // sits flush against the h1's top-left and set the h1's height to the ink
+  // height. The box then hugs the letters exactly, so the space below the
+  // heading is whatever CSS says it is, independent of type size.
   function fit() {
     const avail = head.clientWidth;
     if (!avail) return;
@@ -110,7 +131,14 @@
     if (!ink || !(ink.w > 0)) return;
     const size = avail / ink.w;
     head.style.fontSize = size + 'px';
-    headSpan.style.transform = 'translateX(' + (-ink.lsb * size) + 'px) scaleY(' + SQUASH + ')';
+    headSpan.style.transform = 'none';
+    head.style.height = 'auto';
+    const base = probe.getBoundingClientRect().bottom - headSpan.getBoundingClientRect().top;
+    const top = (base + ink.top * size) * SQUASH;
+    const bot = (base + ink.bot * size) * SQUASH;
+    headSpan.style.transform =
+      'translate(' + (-ink.lsb * size) + 'px,' + (-top) + 'px) scaleY(' + SQUASH + ')';
+    head.style.height = (bot - top) + 'px';
   }
 
   fit();
