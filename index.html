@@ -46,7 +46,7 @@
      them is identical */
   /* 3.25px + 3px pad + the 5.58px of white inside the first line's own line box
      == the 11.83px of white between the copy lines. See the commit message. */
-  #meta { width: 100%; text-align: left; font-weight: 400; padding: 3px 1px; box-sizing: border-box; margin-top: 3.25px; }
+  #meta { width: 100%; text-align: left; font-weight: 400; padding: 3px 1px; box-sizing: border-box; margin-top: 3.25px; }  /* 1px keeps it off the screen edge at every width */
   #sub, #t, #a { display: block; margin: 0; font-size: 19px; line-height: 1.35; color: #000; }
   #now { margin: 0; max-width: 40ch; min-height: 2.7em; }
   #a { letter-spacing: .06em; font-weight: 700; }
@@ -60,7 +60,7 @@
      first line already carries 4.11px above its ink, so 8.71 - 4.11 - 3 = 1.6 */
   @media (max-width: 640px) {
     #sub, #t, #a { font-size: 14px; }
-    #meta { margin-top: 1.6px; padding: 3px 1px; }   /* 1px off the screen edge */
+    #meta { margin-top: 1.6px; }
     #art { top: calc(50% + 36px); }   /* one 12px notch lower than on desktop */
   }
 </style>
