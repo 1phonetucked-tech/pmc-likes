@@ -17,7 +17,7 @@
   }
   h1 {
     margin: 0; width: 100%; font-weight: 700;
-    letter-spacing: .02em; text-transform: lowercase; text-align: center;
+    letter-spacing: -.035em; text-transform: lowercase; text-align: center;
     color: #000; opacity: 1;
     white-space: nowrap;
     line-height: 1; height: .74em;   /* short box; width still spans the viewport */
@@ -25,7 +25,7 @@
   }
   /* scaleY squashes the letters without touching their width, so fit() still holds */
   h1 span {
-    display: inline-block; margin-right: -.02em;
+    display: inline-block; margin-right: .035em;
     transform: scaleY(.7); transform-origin: center top;
   }
   #art {
@@ -70,7 +70,7 @@
   function fit() {
     head.style.fontSize = '100px';
     const w = headSpan.getBoundingClientRect().width;
-    if (w) head.style.fontSize = Math.floor(100 * (innerWidth / w) * 1000) / 1000 + 'px';
+    if (w) head.style.fontSize = Math.floor(100 * (head.clientWidth / w) * 1000) / 1000 + 'px';
   }
   fit();
   addEventListener('resize', fit);
