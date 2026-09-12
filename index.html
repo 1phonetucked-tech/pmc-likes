@@ -31,8 +31,10 @@
   /* zero-sized inline-block: its bottom edge sits exactly on the baseline, which
      is how fit() locates the baseline without guessing at line-box metrics */
   #bl { display: inline-block; width: 0; height: 0; }
+  /* out of flow, so a long title or artist can never push it around */
   #art {
-    width: min(70vw, 50vh, 380px); display: block; margin-top: 26px;
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(70vw, 50vh, 380px); display: block; margin: 0;
     opacity: 1;
   }
   /* flush left, matching the heading's left edge; unbold against the bold body */
