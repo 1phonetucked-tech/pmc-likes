@@ -33,7 +33,7 @@
   #bl { display: inline-block; width: 0; height: 0; }
   /* out of flow, so a long title or artist can never push it around */
   #art {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    position: fixed; top: calc(50% + 24px); left: 50%; transform: translate(-50%, -50%);
     width: min(70vw, 50vh, 380px); display: block; margin: 0;
     opacity: 1;
   }
