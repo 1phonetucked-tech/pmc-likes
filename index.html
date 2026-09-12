@@ -51,6 +51,13 @@
   /* WebKit refuses to autoplay a hidden cross-origin frame and a play() from
      the parent carries no gesture into it, so when autoplay is declined we
      surface the real widget for one tap and hide it again once sound starts */
+  /* ?debug=1 -- event trace, so a silent player can be read without a console */
+  #log {
+    position: fixed; top: 0; right: 0; z-index: 9; margin: 0; padding: 6px 8px;
+    max-width: 46vw; max-height: 100vh; overflow: auto; pointer-events: none;
+    font: 400 11px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap;
+    background: rgba(255,255,255,.92); color: #000; letter-spacing: 0;
+  }
   body.tap #sc {
     position: static; left: auto; width: 100%; max-width: 420px; height: 120px;
     opacity: 1; pointer-events: auto; align-self: flex-start; margin-top: 10px;
@@ -158,6 +165,14 @@
   let guard = null, nudge = null, waiting = false;
   const subEl = document.getElementById('sub'), SUB = subEl.textContent;
 
+  const DEBUG = /[?&]debug/.test(location.search);
+  let logEl = null;
+  function log(m) {
+    if (!DEBUG) return;
+    if (!logEl) { logEl = document.createElement('pre'); logEl.id = 'log'; document.body.appendChild(logEl); }
+    logEl.textContent += m + '\n';
+  }
+
   // Fisher-Yates over the entire library, crypto-seeded. One full pass = every
   // like exactly once, then a fresh shuffle. No repeats until everything played.
   const shuffle = (a) => {
@@ -182,6 +197,7 @@
     // if a track refuses to load (pulled, geo-blocked, embed-disabled), move on
     // -- but never skip while we're waiting on the listener to tap the widget
     guard = setTimeout(() => { if (!waiting) next(); }, 14000);
+    log('next -> ' + t.title);
     if (widget) widget.load(t.url, { auto_play: true, callback: () => widget.play() });
     else frame.src = widgetSrc(t.url);
   }
@@ -193,25 +209,36 @@
   function settle()    { waiting = false; subEl.textContent = SUB; }
 
   function bind() {
-    if (typeof SC === 'undefined' || !SC.Widget) { subEl.textContent = 'player failed to load'; return; }
+    if (typeof SC === 'undefined' || !SC.Widget) { subEl.textContent = 'player failed to load'; log('SC.Widget MISSING'); return; }
     widget = SC.Widget(frame);
     const E = SC.Widget.Events;
-    widget.bind(E.READY,  () => widget.play());
-    widget.bind(E.PLAY,   () => { clearTimeout(guard); clearTimeout(nudge); playing = true; settle(); });
-    widget.bind(E.PAUSE,  () => { playing = false; });
-    widget.bind(E.FINISH, next);
-    widget.bind(E.ERROR,  next);
+    log('bound');
+    widget.bind(E.READY,  () => {
+      log('READY');
+      widget.getCurrentSound(snd => log(snd
+        ? 'sound: ' + snd.title + '\n  streamable=' + snd.streamable + ' policy=' + snd.policy +
+          ' monetization=' + snd.monetization_model + ' kind=' + snd.kind + ' duration=' + snd.duration
+        : 'sound: NONE'));
+      widget.play();
+    });
+    widget.bind(E.PLAY,   () => { log('PLAY'); clearTimeout(guard); clearTimeout(nudge); playing = true; settle();
+      widget.getVolume(v => log('  volume=' + v));
+      setTimeout(() => widget.getPosition(pos => log('  position after 2s = ' + pos + 'ms')), 2000); });
+    widget.bind(E.PAUSE,  () => { log('PAUSE'); playing = false; });
+    widget.bind(E.FINISH, () => { log('FINISH'); next(); });
+    widget.bind(E.ERROR,  () => { log('ERROR'); next(); });
   }
 
   fetch('likes.json')
     .then(r => r.json())
-    .then(list => { queue = shuffle(list.slice()); tEl.textContent = 'tap to play'; })
+    .then(list => { queue = shuffle(list.slice()); tEl.textContent = 'tap to play'; log('queue ' + queue.length); })
     .catch(() => { tEl.textContent = 'likes.json missing'; });
 
   // one tap starts it; after that taps do nothing, so it can't be paused by accident
   function start() {
     if (started || !queue.length) return;
     started = true;
+    log('tap');
     document.body.style.cursor = 'default';
     next();
     frame.addEventListener('load', function once() { frame.removeEventListener('load', once); bind(); });
