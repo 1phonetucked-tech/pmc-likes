@@ -187,14 +187,17 @@
   }
 
   function reveal(msg) { waiting = true; document.body.classList.add('tap'); subEl.textContent = msg; }
-  function hide()      { waiting = false; document.body.classList.remove('tap'); subEl.textContent = SUB; }
+  // Deliberately does NOT re-hide the frame: WebKit suspends media in a frame
+  // it treats as invisible, so pulling it back to 1px/off-screen the instant
+  // PLAY fires kills the sound that just started. Once it's up, it stays up.
+  function settle()    { waiting = false; subEl.textContent = SUB; }
 
   function bind() {
     if (typeof SC === 'undefined' || !SC.Widget) { subEl.textContent = 'player failed to load'; return; }
     widget = SC.Widget(frame);
     const E = SC.Widget.Events;
     widget.bind(E.READY,  () => widget.play());
-    widget.bind(E.PLAY,   () => { clearTimeout(guard); clearTimeout(nudge); playing = true; hide(); });
+    widget.bind(E.PLAY,   () => { clearTimeout(guard); clearTimeout(nudge); playing = true; settle(); });
     widget.bind(E.PAUSE,  () => { playing = false; });
     widget.bind(E.FINISH, next);
     widget.bind(E.ERROR,  next);
