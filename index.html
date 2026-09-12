@@ -50,6 +50,18 @@
   #sub, #t, #a { display: block; margin: 0; font-size: 19px; line-height: 1.35; color: #000; }
   #now { margin: 0; max-width: 40ch; min-height: 2.7em; }
   #a { letter-spacing: .06em; font-weight: 700; }
+
+  /* The artwork is fixed, so it paints over the copy when a long title wraps.
+     Keep the copy on top of it. */
+  #meta { position: relative; z-index: 1; }
+
+  /* Phones: smaller copy, and the margin that keeps the gap under the heading
+     equal to the leading -- 14px/1.35 leaves 8.71px between the lines, and the
+     first line already carries 4.11px above its ink, so 8.71 - 4.11 - 3 = 1.6 */
+  @media (max-width: 640px) {
+    #sub, #t, #a { font-size: 14px; }
+    #meta { margin-top: 1.6px; }
+  }
 </style>
 </head>
 <body>
