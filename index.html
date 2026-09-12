@@ -65,33 +65,55 @@
     art.src = list[0];
   })(['image.jpg', 'image.jpeg', 'image.png', 'image.gif', 'image.webp']);
 
-  // Scale the heading so its INK spans the full viewport width. Measuring the
-  // layout box leaves a gap at the left, because the p carries a left side
-  // bearing the s has no matching right one for. TextMetrics reports the real
-  // ink bounds, so we size by those and shift the bearing back off the edge.
+  // Scale the heading so its INK spans the viewport. The layout box is the
+  // wrong thing to measure: the p carries a fat left side bearing that the s
+  // has no counterpart for, so a box-flush line looks inset on the left. Find
+  // the ink the unambiguous way -- rasterise the text once and scan for the
+  // first and last lit column. Ink metrics are scale-invariant, so measure at
+  // 100px, keep them in em, and reuse them on every resize.
   const head = document.querySelector('h1'), headSpan = document.getElementById('hd');
-  const cv = document.createElement('canvas').getContext('2d');
   const TRACK = -.035, SQUASH = .7;   // must match the CSS letter-spacing / scaleY
+  let ink = null;
+
+  function measure() {
+    const text = headSpan.textContent, S = 100, pad = 200;
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(text.length * S) + pad * 2;
+    cv.height = S * 2;
+    const c = cv.getContext('2d', { willReadFrequently: true });
+    c.font = '700 ' + S + 'px Arial, Helvetica, sans-serif';
+    c.textBaseline = 'alphabetic';
+    c.fillStyle = '#000';
+    if ('letterSpacing' in c) {
+      c.letterSpacing = (TRACK * S) + 'px';
+      c.fillText(text, pad, S * 1.3);
+    } else {                       // older Safari: lay the characters out by hand
+      let x = pad;
+      for (const ch of text) { c.fillText(ch, x, S * 1.3); x += c.measureText(ch).width + TRACK * S; }
+    }
+    const w = cv.width, h = cv.height, d = c.getImageData(0, 0, w, h).data;
+    let min = -1, max = -1;
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        if (d[(y * w + x) * 4 + 3]) { if (min < 0) min = x; max = x; break; }
+      }
+    }
+    return min < 0 ? null : { lsb: (min - pad) / S, w: (max - min + 1) / S };
+  }
 
   function fit() {
     const avail = head.clientWidth;
     if (!avail) return;
-    cv.font = '700 100px Arial, Helvetica, sans-serif';
-    const tracks = 'letterSpacing' in cv;
-    if (tracks) cv.letterSpacing = (TRACK * 100) + 'px';
-    const m = cv.measureText(headSpan.textContent);
-    const left = m.actualBoundingBoxLeft;          // negative when ink starts right of the origin
-    let right = m.actualBoundingBoxRight;
-    if (!tracks) right += TRACK * 100 * (headSpan.textContent.length - 1);
-    const ink = right + left;
-    if (!(ink > 0)) return;
-    const scale = avail / ink;
-    head.style.fontSize = (100 * scale) + 'px';
-    headSpan.style.transform = 'translateX(' + (left * scale) + 'px) scaleY(' + SQUASH + ')';
+    if (!ink) ink = measure();
+    if (!ink || !(ink.w > 0)) return;
+    const size = avail / ink.w;
+    head.style.fontSize = size + 'px';
+    headSpan.style.transform = 'translateX(' + (-ink.lsb * size) + 'px) scaleY(' + SQUASH + ')';
   }
+
   fit();
   addEventListener('resize', fit);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { ink = null; fit(); });
 
   let queue = [], i = -1, widget = null, started = false, playing = false, guard = null;
 
